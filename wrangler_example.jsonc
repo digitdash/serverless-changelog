@@ -1,0 +1,30 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "serverless-changelog",
+	"main": "./dist/_worker.js/index.js",
+	"compatibility_date": "2026-04-06",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"assets": {
+		"binding": "ASSETS",
+		"directory": "./dist"
+	},
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "YOUR_D1_DATABASE_NAME",
+			"database_id": "YOUR_D1_DATABASE_ID"
+		},
+		{
+			"binding": "YOUR_D1_BINDING_NAME",
+			"database_name": "YOUR_D1_DATABASE_NAME",
+			"database_id": "YOUR_D1_DATABASE_ID",
+			"remote": true
+		}
+	],
+	"vars": {
+		"SITE_NAME": "SERVICE INC",
+		"SITE_TAGLINE": "SaaS Changelog and project updates"
+	}
+}

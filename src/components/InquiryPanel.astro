@@ -1,0 +1,39 @@
+<aside class="side-card">
+  <h2 class="side-title">Ask a Question or Share an Idea</h2>
+  <p class="side-copy">
+    Use this channel for shareholder questions, feedback, or suggestions on the project roadmap.
+  </p>
+
+  <form id="inquiry-form" class="stack">
+    <div>
+      <label class="field-label" for="inquiryType">Type</label>
+      <select class="field-select" id="inquiryType" name="inquiryType" required>
+        <option value="question">Question</option>
+        <option value="idea">Idea</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="field-label" for="inquiryName">Name</label>
+      <input class="field" id="inquiryName" name="inquiryName" type="text" placeholder="First and last name" required />
+    </div>
+
+    <div>
+      <label class="field-label" for="inquiryEmail">Email</label>
+      <input class="field" id="inquiryEmail" name="inquiryEmail" type="email" placeholder="name@company.com" required />
+    </div>
+
+    <div>
+      <label class="field-label" for="inquiryPhone">Phone</label>
+      <input class="field" id="inquiryPhone" name="inquiryPhone" type="tel" placeholder="(555) 555-5555" required />
+    </div>
+
+    <div>
+      <label class="field-label" for="inquiryContent">Details</label>
+      <textarea class="field-textarea" id="inquiryContent" name="inquiryContent" placeholder="Share your question or idea..." required></textarea>
+    </div>
+
+    <button class="primary-button" type="submit">Send</button>
+    <div class="inline-feedback" id="inquiry-feedback"></div>
+  </form>
+</aside>

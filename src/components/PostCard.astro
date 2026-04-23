@@ -1,0 +1,25 @@
+---
+const { post } = Astro.props;
+const getTagStyle = (tag) => `--tag-color: ${tag.color || "#ff9f43"};`;
+---
+
+<div class="post-entry" data-post-id={post.postId}>
+  <aside class="post-rail">
+    <span class="post-date">{post.postDate}</span>
+    {post.tags?.length > 0 && (
+      <div class="tag-list">
+        {post.tags.map((tag) => (
+          <span class="tag-pill" style={getTagStyle(tag)}>{tag.name}</span>
+        ))}
+      </div>
+    )}
+  </aside>
+
+  <article class="card post-card">
+    <h2 class="post-title">
+      <a href={`/posts/${post.postId}`}>{post.title}</a>
+    </h2>
+    <p class="post-subtitle">{post.subtitle}</p>
+    <div class="post-body" set:html={post.contentHtml}></div>
+  </article>
+</div>

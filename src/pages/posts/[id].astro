@@ -1,0 +1,53 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import AccessGate from "../../components/AccessGate.astro";
+import Header from "../../components/Header.astro";
+import { hasViewerAccess } from "../../lib/auth.js";
+import { getPostById, getViewerAccessSettings } from "../../lib/db.js";
+import { getDb, getSiteConfig } from "../../lib/env.js";
+
+const db = getDb(Astro.locals);
+const site = getSiteConfig(Astro.locals);
+const post = await getPostById(db, Astro.params.id);
+const getTagStyle = (tag) => `--tag-color: ${tag.color || "#ff9f43"};`;
+const accessSettings = await getViewerAccessSettings(db);
+const viewerHasAccess = accessSettings.enabled ? await hasViewerAccess(Astro) : true;
+const error = Astro.url.searchParams.get("error");
+
+if (!post) {
+  return Astro.redirect("/");
+}
+---
+
+<BaseLayout title={`${post.title} | ${site.siteName}`} description={post.subtitle}>
+  <Header siteName={site.siteName} siteTagline={site.siteTagline} />
+
+  {!viewerHasAccess ? (
+    <AccessGate
+      title="Investor Access Required"
+      copy="This changelog is protected with a single viewer password. Enter it once to access all entries."
+      returnTo={`/posts/${post.postId}`}
+      error={error || ""}
+    />
+  ) : (
+    <main class="feed-column">
+      <div class="post-entry post-entry-detail">
+        <aside class="post-rail">
+          <a class="ghost-link rail-back-link" href="/">Back to changelog</a>
+          <span class="post-date">{post.postDate}</span>
+          {post.tags?.length > 0 && (
+            <div class="tag-list">
+              {post.tags.map((tag) => <span class="tag-pill" style={getTagStyle(tag)}>{tag.name}</span>)}
+            </div>
+          )}
+        </aside>
+
+        <article class="card post-card">
+          <h1 class="post-title">{post.title}</h1>
+          <p class="post-subtitle">{post.subtitle}</p>
+          <div class="post-body" set:html={post.contentHtml}></div>
+        </article>
+      </div>
+    </main>
+  )}
+</BaseLayout>

@@ -1,0 +1,52 @@
+---
+import "easymde/dist/easymde.min.css";
+
+import AdminPostForm from "../../../components/AdminPostForm.astro";
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import Header from "../../../components/Header.astro";
+import { isAdminAuthenticated } from "../../../lib/auth.js";
+import { getPostById, listTags } from "../../../lib/db.js";
+import { getDb, getSiteConfig } from "../../../lib/env.js";
+
+if (!await isAdminAuthenticated(Astro)) {
+  return Astro.redirect("/admin");
+}
+
+const site = getSiteConfig(Astro.locals);
+const db = getDb(Astro.locals);
+const post = await getPostById(db, Astro.params.id);
+const tags = await listTags(db);
+const error = Astro.url.searchParams.get("error");
+const success = Astro.url.searchParams.get("success");
+
+if (!post) {
+  return Astro.redirect("/admin?error=Post+not+found");
+}
+---
+
+<BaseLayout title={`Edit ${post.title} | ${site.siteName}`} description="Edit changelog post" admin={true}>
+  <Header siteName={site.siteName} siteTagline="Edit post" showAdminLink={false} />
+
+  <main class="admin-shell">
+    {error && <div class="message-bar error">{error}</div>}
+    {success && <div class="message-bar success">{success}</div>}
+
+    <section class="admin-card">
+      <div class="table-actions" style="justify-content: space-between; margin-bottom: 18px;">
+        <div>
+          <h1 class="admin-title">Edit post</h1>
+          <p class="section-copy">Update content, tags, date, or access controls.</p>
+        </div>
+        <a class="ghost-link" href="/admin">Back to admin</a>
+      </div>
+
+      <AdminPostForm
+        action={`/api/admin/posts/${post.postId}.json`}
+        post={post}
+        tags={tags}
+        submitLabel="Save changes"
+        includeDelete={true}
+      />
+    </section>
+  </main>
+</BaseLayout>

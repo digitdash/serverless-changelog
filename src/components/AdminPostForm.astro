@@ -1,0 +1,114 @@
+---
+const {
+  action,
+  submitLabel = "Save Post",
+  post = null,
+  tags = [],
+  includeDelete = false
+} = Astro.props;
+
+const selectedSlugs = new Set((post?.tags || []).map((tag) => tag.slug));
+---
+
+<form class="stack" action={action} method="post">
+  <div class="field-row">
+    <div>
+      <label class="field-label" for="postDateSort">Post date</label>
+      <input
+        class="field"
+        id="postDateSort"
+        name="postDateSort"
+        type="date"
+        value={post?.postDateSort || new Date().toISOString().slice(0, 10)}
+        required
+      />
+    </div>
+
+    <div>
+      <label class="field-label" for="postTitle">Title</label>
+      <input class="field" id="postTitle" name="postTitle" type="text" value={post?.title || ""} required />
+    </div>
+
+    <div>
+      <label class="field-label" for="postSubtitle">Subtitle</label>
+      <input class="field" id="postSubtitle" name="postSubtitle" type="text" value={post?.subtitle || ""} required />
+    </div>
+  </div>
+
+  <div>
+    <span class="field-label">Tags</span>
+    <div class="checkbox-grid">
+      {tags.map((tag) => (
+        <label class="checkbox-pill">
+          <input
+            type="checkbox"
+            name="tagIds"
+            value={tag.tagId}
+            checked={selectedSlugs.has(tag.slug)}
+          />
+          <span class="tag-pill" style={`--tag-color: ${tag.color || "#ff9f43"};`}>{tag.name}</span>
+        </label>
+      ))}
+    </div>
+  </div>
+
+  <div>
+    <label class="field-label" for="postContent">Content</label>
+    <textarea
+      class="field-textarea"
+      id="postContent"
+      name="postContent"
+      data-markdown-editor
+      required
+    >{post?.content || ""}</textarea>
+    <p class="editor-note">Use Markdown. Images can be embedded with the toolbar or standard `![alt](https://...)` syntax.</p>
+  </div>
+
+  <div class="table-actions">
+    <button class="primary-button" type="submit">{submitLabel}</button>
+    {includeDelete && (
+      <button class="micro-button danger" type="submit" name="_intent" value="delete">
+        Delete Post
+      </button>
+    )}
+  </div>
+</form>
+
+<script>
+  import EasyMDE from "easymde";
+
+  const editors = document.querySelectorAll("textarea[data-markdown-editor]");
+  for (const textarea of editors) {
+    if (textarea.dataset.editorReady === "true") {
+      continue;
+    }
+
+    new EasyMDE({
+      element: textarea,
+      spellChecker: false,
+      status: false,
+      forceSync: true,
+      sideBySideFullscreen: false,
+      placeholder: "Write the changelog update here...",
+      toolbar: [
+        "bold",
+        "italic",
+        "heading",
+        "|",
+        "quote",
+        "unordered-list",
+        "ordered-list",
+        "|",
+        "link",
+        "image",
+        "table",
+        "|",
+        "preview",
+        "side-by-side",
+        "guide"
+      ]
+    });
+
+    textarea.dataset.editorReady = "true";
+  }
+</script>

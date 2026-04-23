@@ -1,0 +1,14 @@
+---
+const { siteName, siteTagline, showAdminLink = true } = Astro.props;
+---
+
+<header class="site-header">
+  <div class="brand">
+    <a href="/" class="brand-mark">{siteName}</a>
+    <span class="brand-copy">{siteTagline}</span>
+  </div>
+
+  <div class="header-actions">
+    {showAdminLink && <a class="ghost-link" href="/admin">Admin</a>}
+  </div>
+</header>

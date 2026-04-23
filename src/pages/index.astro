@@ -1,0 +1,210 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import AccessGate from "../components/AccessGate.astro";
+import Header from "../components/Header.astro";
+import InquiryPanel from "../components/InquiryPanel.astro";
+import PostCard from "../components/PostCard.astro";
+import { hasViewerAccess } from "../lib/auth.js";
+import { getViewerAccessSettings, listPosts } from "../lib/db.js";
+import { getDb, getSiteConfig } from "../lib/env.js";
+
+const db = getDb(Astro.locals);
+const site = getSiteConfig(Astro.locals);
+const accessSettings = await getViewerAccessSettings(db);
+const viewerHasAccess = accessSettings.enabled ? await hasViewerAccess(Astro) : true;
+const error = Astro.url.searchParams.get("error");
+const { posts, hasMore } = viewerHasAccess
+  ? await listPosts(db, { limit: 3, offset: 0 })
+  : { posts: [], hasMore: false };
+const visiblePosts = posts;
+---
+
+<BaseLayout title={`${site.siteName} | Changelog`} description={site.siteTagline}>
+  <Header siteName={site.siteName} siteTagline={site.siteTagline} />
+
+  {!viewerHasAccess ? (
+    <AccessGate
+      title="Investor Changelog"
+      copy="Stay updated with the latest project news and releases for Junglebet strategic partners and investors."
+      returnTo="/"
+      error={error || ""}
+    />
+  ) : (
+    <div class="main-grid">
+      <main class="feed-column">
+        <section class="hero-panel">
+         
+
+          <div class="search-row">
+            <input
+              class="search-input"
+              id="search-input"
+              type="search"
+              placeholder="Search posts, subtitles, tags, or details"
+              aria-label="Search changelog posts"
+            />
+            {accessSettings.enabled && (
+              <form action="/api/access/logout.json" method="post">
+                <button class="ghost-link" type="submit">Log out</button>
+              </form>
+            )}
+          </div>
+        </section>
+
+        <section class="feed" id="post-feed">
+          {visiblePosts.map((post) => <PostCard post={post} />)}
+        </section>
+
+        <div class="load-more-row" id="load-more-row" hidden={!hasMore}>
+          <button class="secondary-button" id="load-more-button" type="button">Load older updates</button>
+        </div>
+
+        <div class="message-box empty-state" id="empty-state" hidden={visiblePosts.length > 0}>
+          No changelog entries yet.
+        </div>
+      </main>
+
+      <div class="sticky-column">
+        <InquiryPanel />
+      </div>
+    </div>
+  )}
+</BaseLayout>
+
+{viewerHasAccess && (
+<script define:vars={{ initialOffset: visiblePosts.length, initialHasMore: hasMore }}>
+  const feed = document.querySelector("#post-feed");
+  const searchInput = document.querySelector("#search-input");
+  const loadMoreRow = document.querySelector("#load-more-row");
+  const loadMoreButton = document.querySelector("#load-more-button");
+  const emptyState = document.querySelector("#empty-state");
+  const inquiryForm = document.querySelector("#inquiry-form");
+  const inquiryFeedback = document.querySelector("#inquiry-feedback");
+
+  let offset = initialOffset;
+  let hasMore = initialHasMore;
+  let loading = false;
+  let search = "";
+
+  function escapeHtml(value) {
+    return String(value || "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+  }
+
+  function renderTags(tags) {
+    return (tags || [])
+      .map((tag) => `<span class="tag-pill" style="--tag-color:${escapeHtml(tag.color || "#ff9f43")}">${escapeHtml(tag.name)}</span>`)
+      .join("");
+  }
+
+  function renderPost(post) {
+    return `
+      <div class="post-entry" data-post-id="${escapeHtml(post.postId)}">
+        <aside class="post-rail">
+          <span class="post-date">${escapeHtml(post.postDate)}</span>
+          ${post.tags?.length ? `<div class="tag-list">${renderTags(post.tags)}</div>` : ""}
+        </aside>
+        <article class="card post-card">
+          <h2 class="post-title"><a href="/posts/${escapeHtml(post.postId)}">${escapeHtml(post.title)}</a></h2>
+          <p class="post-subtitle">${escapeHtml(post.subtitle)}</p>
+          <div class="post-body">${post.contentHtml}</div>
+        </article>
+      </div>
+    `;
+  }
+
+  async function fetchPosts({ reset = false } = {}) {
+    if (loading) {
+      return;
+    }
+
+    loading = true;
+    loadMoreButton?.setAttribute("disabled", "disabled");
+
+    const requestOffset = reset ? 0 : offset;
+    const query = new URLSearchParams({
+      offset: String(requestOffset),
+      limit: "3",
+      search
+    });
+
+    const response = await fetch(`/api/posts/index.json?${query.toString()}`);
+    const payload = await response.json();
+
+    if (!response.ok) {
+      window.location.href = "/?error=Your+viewer+session+expired";
+      return;
+    }
+
+    if (reset) {
+      feed.innerHTML = "";
+      offset = 0;
+    }
+
+    for (const post of payload.posts) {
+      feed.insertAdjacentHTML("beforeend", renderPost(post));
+      offset += 1;
+    }
+
+    hasMore = Boolean(payload.hasMore);
+    loadMoreRow.hidden = !hasMore;
+    emptyState.hidden = feed.children.length > 0;
+
+    loading = false;
+    loadMoreButton?.removeAttribute("disabled");
+  }
+
+  let searchTimer;
+  searchInput?.addEventListener("input", () => {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(() => {
+      search = searchInput.value.trim();
+      fetchPosts({ reset: true });
+    }, 220);
+  });
+
+  loadMoreButton?.addEventListener("click", () => {
+    if (hasMore) {
+      fetchPosts();
+    }
+  });
+
+  if (loadMoreRow && "IntersectionObserver" in window) {
+    const observer = new IntersectionObserver((entries) => {
+      if (entries[0]?.isIntersecting && hasMore && !loading) {
+        fetchPosts();
+      }
+    }, { rootMargin: "180px 0px" });
+
+    observer.observe(loadMoreRow);
+  }
+
+  inquiryForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    inquiryFeedback.textContent = "Submitting...";
+
+    const formData = new FormData(inquiryForm);
+    const response = await fetch("/api/inquiries.json", {
+      method: "POST",
+      body: formData
+    });
+    const payload = await response.json();
+
+    if (!payload.ok) {
+      if (response.status === 401) {
+        window.location.href = "/?error=Your+viewer+session+expired";
+        return;
+      }
+      inquiryFeedback.textContent = payload.error || "Could not send your message.";
+      return;
+    }
+
+    inquiryForm.reset();
+    inquiryFeedback.textContent = payload.message || "Your message has been recorded.";
+  });
+</script>
+)}

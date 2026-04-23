@@ -1,0 +1,27 @@
+---
+const {
+  action = "/api/access/login.json",
+  title = "Investor Updates",
+  copy = "Enter the shared viewer password to access the changelog.",
+  returnTo = "/",
+  error = ""
+} = Astro.props;
+---
+
+<section class="access-gate-shell">
+  <div class="admin-card access-gate-card">
+    <span class="eyebrow">Unauthorized access prohibited</span>
+    <h1 class="hero-title access-gate-title">{title}</h1>
+    <p class="section-copy">{copy}</p>
+    {error && <div class="message-bar error">{error}</div>}
+
+    <form class="stack" action={action} method="post">
+      <input type="hidden" name="returnTo" value={returnTo} />
+      <div>
+        <label class="field-label" for="viewerPassword">Enter Passphrase</label>
+        <input class="field" id="viewerPassword" name="password" type="password" required />
+      </div>
+      <button class="primary-button" type="submit">Continue -></button>
+    </form>
+  </div>
+</section>

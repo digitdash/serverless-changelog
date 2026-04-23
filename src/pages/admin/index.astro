@@ -1,0 +1,161 @@
+---
+import "easymde/dist/easymde.min.css";
+
+import AdminPostForm from "../../components/AdminPostForm.astro";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import Header from "../../components/Header.astro";
+import { isAdminAuthenticated } from "../../lib/auth.js";
+import { getViewerAccessSettings, listAdminPosts, listTags } from "../../lib/db.js";
+import { getDb, getSiteConfig } from "../../lib/env.js";
+
+const site = getSiteConfig(Astro.locals);
+const db = getDb(Astro.locals);
+const authenticated = await isAdminAuthenticated(Astro);
+const tags = authenticated ? await listTags(db) : [];
+const posts = authenticated ? await listAdminPosts(db) : [];
+const accessSettings = authenticated ? await getViewerAccessSettings(db) : { enabled: false };
+const error = Astro.url.searchParams.get("error");
+const success = Astro.url.searchParams.get("success");
+---
+
+<BaseLayout title={`Admin | ${site.siteName}`} description="Manage changelog posts" admin={true}>
+  <Header siteName={site.siteName} siteTagline="Admin panel" showAdminLink={false} />
+
+  {!authenticated ? (
+    <section class="admin-card" style="max-width: 460px; margin: 60px auto 0;">
+      <h1 class="admin-title">Admin access</h1>
+      <p class="section-copy">Sign in with the configured admin password to manage changelog entries.</p>
+      {error && <div class="message-bar error">{error}</div>}
+
+      <form class="stack" action="/api/admin/login.json" method="post">
+        <div>
+          <label class="field-label" for="password">Admin password</label>
+          <input class="field" id="password" name="password" type="password" required />
+        </div>
+        <button class="primary-button" type="submit">Enter admin panel</button>
+      </form>
+    </section>
+  ) : (
+    <main class="admin-shell">
+      {error && <div class="message-bar error">{error}</div>}
+      {success && <div class="message-bar success">{success}</div>}
+
+      <section class="admin-grid">
+        <div class="admin-card">
+          <h1 class="admin-title">New changelog post</h1>
+          <p class="section-copy">
+            Draft investor updates with markdown, images, and tags.
+          </p>
+          <AdminPostForm action="/api/admin/posts.json" tags={tags} submitLabel="Publish update" />
+        </div>
+
+        <div class="panel-grid">
+          <section class="admin-card">
+            <h2 class="section-title">Viewer Access</h2>
+            <p class="section-copy">Protect the entire changelog with one shared viewer password.</p>
+            <form class="stack" action="/api/admin/access.json" method="post">
+              <label class="checkbox-pill">
+                <input
+                  type="checkbox"
+                  name="viewerPasswordEnabled"
+                  checked={accessSettings.enabled}
+                />
+                <span>Require a password for the full changelog</span>
+              </label>
+              <div>
+                <label class="field-label" for="viewerPassword">Viewer password</label>
+                <input
+                  class="field"
+                  id="viewerPassword"
+                  name="viewerPassword"
+                  type="text"
+                  placeholder={accessSettings.enabled ? "Enter a new password to rotate it" : "Set a password before enabling"}
+                />
+              </div>
+              <button class="secondary-button" type="submit">Save access settings</button>
+            </form>
+          </section>
+
+          <section class="admin-card">
+            <h2 class="section-title">Tags</h2>
+            <p class="section-copy">Create reusable tags, assign their display color, and edit them inline.</p>
+            <form class="stack" action="/api/admin/tags.json" method="post">
+              <div>
+                <label class="field-label" for="tagName">New tag</label>
+                <input class="field" id="tagName" name="tagName" type="text" placeholder="Example: Investor Note" />
+              </div>
+              <div>
+                <label class="field-label" for="tagColor">Tag color</label>
+                <input class="field color-field" id="tagColor" name="tagColor" type="color" value="#ff9f43" />
+              </div>
+              <button class="secondary-button" type="submit">Add tag</button>
+            </form>
+
+            <div class="tag-manager-list">
+              {tags.map((tag) => (
+                <form class="tag-edit-row" action={`/api/admin/tags/${tag.tagId}.json`} method="post">
+                  <input class="field" name="tagName" type="text" value={tag.name} />
+                  <input class="field color-field" name="tagColor" type="color" value={tag.color} />
+                  <span class="tag-pill" style={`--tag-color: ${tag.color};`}>{tag.name}</span>
+                  <button class="micro-button" type="submit">Save</button>
+                </form>
+              ))}
+            </div>
+          </section>
+
+          <section class="admin-card">
+            <h2 class="section-title">Session</h2>
+            <p class="section-copy">When you are done, close the admin session from this device.</p>
+            <form action="/api/admin/logout.json" method="post">
+              <button class="micro-button" type="submit">Log out</button>
+            </form>
+          </section>
+        </div>
+      </section>
+
+      <section class="admin-card">
+        <h2 class="section-title">Posts</h2>
+        <p class="section-copy">Edit or remove existing changelog entries.</p>
+
+        {posts.length > 0 ? (
+          <table class="post-table">
+            <thead>
+              <tr>
+                <th>Post</th>
+                <th>Date</th>
+                <th>Tags</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {posts.map((post) => (
+                <tr>
+                  <td>
+                    <strong>{post.title}</strong>
+                    <div class="muted">{post.subtitle}</div>
+                  </td>
+                  <td>{post.postDate}</td>
+                  <td>
+                    <div class="tag-list">
+                      {post.tags.map((tag) => <span class="tag-pill" style={`--tag-color: ${tag.color};`}>{tag.name}</span>)}
+                    </div>
+                  </td>
+                  <td>
+                    <div class="table-actions">
+                      <a class="micro-button" href={`/admin/edit/${post.postId}`}>Edit</a>
+                      <form action={`/api/admin/posts/${post.postId}.json`} method="post">
+                        <button class="micro-button danger" type="submit" name="_intent" value="delete">Delete</button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <div class="message-box">No posts created yet.</div>
+        )}
+      </section>
+    </main>
+  )}
+</BaseLayout>
