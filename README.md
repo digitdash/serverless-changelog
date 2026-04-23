@@ -1,5 +1,7 @@
 # Serverless Changelog
 
+![Main Frontend](./assets/img/main_frontend.png)
+
 Changelog platforms are a great use case for leveraging the benefits of serverless. Not only is it more cost effective than using a cheap always running VPS, but it also allows for near instant scalability if needed in the future.
 
 This lightweight changelog app helps track and display changelog updates to end users or investors for any project. Save time and money on your next project - Deploy a cost effective and highly scalable changelog service on Cloudflare for your projects in ~10 minutes.
@@ -22,6 +24,8 @@ This lightweight changelog app helps track and display changelog updates to end 
 - Simple and secure admin panel for content post and tag management
 - Inquiry module for funneling user submitted questions/suggestions
 - Markdown content support with image support via markdown image syntax for data portability
+
+![Admin Panel](./assets/img/admin_panel.png)
 
 ## Required environment variables
 
